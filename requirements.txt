@@ -1,4 +1,5 @@
 Flask
 requests
+moviepy
 beautifulsoup4
 Pillow
