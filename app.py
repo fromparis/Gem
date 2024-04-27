@@ -1,24 +1,47 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify
+from werkzeug.utils import secure_filename
 import os
-from groq import Groq
+from openai_whisper import whisper
 
 app = Flask(__name__)
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+app.config['UPLOAD_FOLDER'] = 'uploads/'
+app.config['ALLOWED_EXTENSIONS'] = {'mp3', 'mp4', 'wav', 'ogg', 'm4a'}
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+# Load the Whisper model
+model = whisper.load_model("medium")
 
-@app.route('/chat', methods=['POST'])
-def chat():
-    user_input = request.json.get('message')
-    if not user_input:
-        return jsonify({'error': 'No message provided'}), 400
-    chat_completion = client.chat.completions.create(
-        messages=[{"role": "user", "content": user_input}],
-        model="mixtral-8x7b-32768",
-    )
-    return jsonify({'response': chat_completion.choices[0].message.content})
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    # Check if the post request has the file part
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+
+        # Process the file for transcription
+        transcription = transcribe(file_path)
+
+        # Optionally, remove the file after processing if not needed
+        os.remove(file_path)
+
+        return jsonify({'transcript': transcription})
+    else:
+        return jsonify({'error': 'File type not allowed'}), 400
+
+def transcribe(audio_path):
+    audio = whisper.load_audio(audio_path)
+    result = model.transcribe(audio)
+    return result['text']
 
 if __name__ == '__main__':
+    if not os.path.exists(app.config['UPLOAD_FOLDER']):
+        os.makedirs(app.config['UPLOAD_FOLDER'])
     app.run(debug=True)
