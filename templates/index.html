@@ -2,53 +2,34 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat with AI</title>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        #chat-container { padding: 10px; border: 1px solid #ccc; min-height: 300px; margin: 20px 0; }
-        #user-input { width: calc(100% - 22px); padding: 10px; }
-    </style>
+    <title>Upload Audio/Video for Transcription</title>
 </head>
 <body>
-    <h2>Chat with AI</h2>
-    <div id="chat-container"></div>
-    <input type="text" id="user-input" placeholder="Type your message here..." onkeypress="if(event.keyCode==13){sendMessage();}">
-    <button onclick="sendMessage()">Send</button>
+    <h1>Transcription Service</h1>
+    <p>Select an audio or video file and get its transcript.</p>
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" id="fileInput" name="file" accept="audio/*,video/*">
+        <button type="button" onclick="uploadFile()">Upload</button>
+    </form>
+    <div id="transcript">
+        <p>Transcript will appear here...</p>
+    </div>
 
     <script>
-        function sendMessage() {
-            var userInput = document.getElementById('user-input');
-            var chatContainer = document.getElementById('chat-container');
-            if (userInput.value.trim() === '') return;
-
-            // Display user's message in chat container
-            var userMessage = document.createElement('div');
-            userMessage.textContent = 'You: ' + userInput.value;
-            chatContainer.appendChild(userMessage);
-
-            // Prepare the data to send
-            var data = { message: userInput.value };
-
-            // Make a POST request to the Flask server
-            fetch('/chat', {
+        function uploadFile() {
+            var form = document.getElementById('uploadForm');
+            var formData = new FormData(form);
+            fetch('/upload', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data),
+                body: formData,
             })
             .then(response => response.json())
             .then(data => {
-                // Display AI's response in chat container
-                var aiMessage = document.createElement('div');
-                aiMessage.textContent = 'AI: ' + data.response;
-                chatContainer.appendChild(aiMessage);
+                document.getElementById('transcript').innerHTML = `<p>Transcript: ${data.transcript}</p>`;
             })
-            .catch(error => console.error('Error:', error));
-
-            // Clear the input field
-            userInput.value = '';
+            .catch(error => {
+                console.error('Error:', error);
+            });
         }
     </script>
 </body>
