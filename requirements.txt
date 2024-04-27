@@ -4,3 +4,4 @@ moviepy
 beautifulsoup4
 Pillow
 groq
+openai-whisper
