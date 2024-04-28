@@ -1,36 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Upload Audio/Video for Transcription</title>
-</head>
+<html>
 <body>
-    <h1>Transcription Service</h1>
-    <p>Select an audio or video file and get its transcript.</p>
-    <form id="uploadForm" enctype="multipart/form-data">
-        <input type="file" id="fileInput" name="file" accept="audio/*,video/*">
-        <button type="button" onclick="uploadFile()">Upload</button>
-    </form>
-    <div id="transcript">
-        <p>Transcript will appear here...</p>
-    </div>
-
-    <script>
-        function uploadFile() {
-            var form = document.getElementById('uploadForm');
-            var formData = new FormData(form);
-            fetch('/upload', {
-                method: 'POST',
-                body: formData,
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('transcript').innerHTML = `<p>Transcript: ${data.transcript}</p>`;
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
-        }
-    </script>
+  <h2>Audio Transcription with WhisperX</h2>
+  <form action="http://127.0.0.1:5000/transcribe" method="post" enctype="multipart/form-data">
+    <input type="file" name="audio" required>
+    <input type="submit">
+  </form>
 </body>
 </html>
