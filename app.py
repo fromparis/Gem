@@ -1,8 +1,9 @@
 from flask import Flask, request, jsonify
+import os
 import whisper
 
 app = Flask(__name__)
-model = whisper.load_model("base")  # Load a Whisper model; choose the model size that suits your needs
+model = whisper.load_model("base")
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe_audio():
@@ -10,11 +11,11 @@ def transcribe_audio():
         return "No audio file provided", 400
 
     audio_file = request.files['audio']
-    audio_file.save("temp_audio.webm")  # Save the uploaded audio file
+    audio_file.save("temp_audio.webm")
 
-    # Process the audio file with Whisper
     result = model.transcribe("temp_audio.webm")
     return jsonify(result)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
