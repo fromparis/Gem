@@ -7,7 +7,18 @@
 <body>
     <h1>Upload your file</h1>
     <form action="/" method="post" enctype="multipart/form-data">
-        <input type="file" name="file">
+        <input type="file" name="file" required>
+
+        <!-- Dropdown for language selection -->
+        <select name="language" required>
+            <option value="">Select Language</option>
+            <option value="en-US">English (US)</option>
+            <option value="zh-CN">Chinese (Mandarin)</option>
+            <option value="fr-FR">French</option>
+            <option value="es-ES">Spanish</option>
+            <option value="de-DE">German</option>
+        </select>
+
         <input type="submit" value="Transcribe">
     </form>
 </body>
