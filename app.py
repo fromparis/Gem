@@ -1,30 +1,37 @@
+from flask import Flask, request, jsonify
 import os
-import platform
+from google.cloud import speech_v1
+from google.cloud.speech_v1 import enums
 
-import pkg_resources
-from setuptools import find_packages, setup
+app = Flask(__name__)
 
-setup(
-    name="whisperx",
-    py_modules=["whisperx"],
-    version="3.1.1",
-    description="Time-Accurate Automatic Speech Recognition using Whisper.",
-    readme="README.md",
-    python_requires=">=3.8",
-    author="Max Bain",
-    url="https://github.com/m-bain/whisperx",
-    license="MIT",
-    packages=find_packages(exclude=["tests*"]),
-    install_requires=[
-        str(r)
-        for r in pkg_resources.parse_requirements(
-            open(os.path.join(os.path.dirname(__file__), "requirements.txt"))
-        )
-    ]
-    + [f"pyannote.audio==3.1.1"],
-    entry_points={
-        "console_scripts": ["whisperx=whisperx.transcribe:cli"],
-    },
-    include_package_data=True,
-    extras_require={"dev": ["pytest"]},
-)
+@app.route('/transcribe', methods=['POST'])
+def transcribe_video():
+    video_file = request.files['video']
+    client = speech_v1.SpeechClient()
+    audio = {"uri": video_file.filename}
+    config = {
+        "enable_word_time_offsets": True,
+        "language_code": "en-US",
+        "sample_rate_hertz": 16000,
+    }
+    operation = client.long_running_recognize(config, audio)
+    response = operation.result(timeout=90)
+
+    results = []
+    for result in response.results:
+        alternative = result.alternatives[0]
+        for word_info in alternative.words:
+            word = word_info.word
+            start_time = word_info.start_time
+            end_time = word_info.end_time
+            results.append({
+                "word": word,
+                "start_time": start_time.seconds + start_time.nanos * 1e-9,
+                "end_time": end_time.seconds + end_time.nanos * 1e-9,
+            })
+
+    return jsonify(results)
+
+if __name__ == '__main__':
+    app.run(debug=True)
