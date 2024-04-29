@@ -4,6 +4,7 @@ import moviepy.editor as mp
 from google.oauth2 import service_account
 import json
 from io import BytesIO
+import os
 
 app = Flask(__name__)
 
@@ -32,12 +33,11 @@ def home():
                 audio = video.audio
                 audio_buffer = BytesIO()
                 audio.write_audiofile(audio_buffer, codec='pcm_s16le', nbytes=2, fps=16000)
+                audio_buffer.seek(0)  # Important to reset the buffer's position to the beginning
                 audio_content = audio_buffer.getvalue()
             else:  # Assume the file is an audio file
                 audio_content = file.read()
 
-            # Initialize the Google Speech client
-            client = speech.SpeechClient()
             audio = speech.RecognitionAudio(content=audio_content)
             config = speech.RecognitionConfig(
                 language_code='en-US',
@@ -57,4 +57,3 @@ def home():
 
 if __name__ == '__main__':
     app.run(debug=True)
- 
