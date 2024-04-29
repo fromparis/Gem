@@ -1,58 +1,24 @@
 import os
 import json
-from flask import Flask, request, render_template, jsonify
-from google.cloud import speech
-from google.oauth2 import service_account
-import moviepy.editor as mp
-from io import BytesIO
+from flask import Flask
 
 app = Flask(__name__)
 
-# Safely load credentials from environment variable
-key_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON')
-if key_path is None:
-    raise EnvironmentError("The environment variable 'GOOGLE_APPLICATION_CREDENTIALS_JSON' is not set.")
+@app.route('/')
+def check_env():
+    # Attempt to fetch the environment variable
+    json_credentials = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON')
 
-credentials_dict = json.loads(key_path.replace('\\n', '\n'))
-credentials = service_account.Credentials.from_service_account_info(credentials_dict)
-
-# Use the credentials to create a client
-client = speech.SpeechClient(credentials=credentials)
-
-@app.route('/', methods=['GET', 'POST'])
-def home():
-    if request.method == 'POST':
-        if 'file' not in request.files:
-            return jsonify({"error": "No file provided"}), 400
-        file = request.files['file']
-        if file.filename == '':
-            return jsonify({"error": "No file selected"}), 400
-
+    # Check if the environment variable is set
+    if json_credentials is None:
+        return "Environment variable not set."
+    else:
         try:
-            if file.filename.endswith('.mp4'):
-                video = mp.VideoFileClip(file)
-                audio = video.audio
-                audio_buffer = BytesIO()
-                audio.write_audiofile(audio_buffer, codec='pcm_s16le', nbytes=2, fps=16000)
-                audio_buffer.seek(0)
-                audio_content = audio_buffer.getvalue()
-            else:
-                audio_content = file.read()
-
-            audio = speech.RecognitionAudio(content=audio_content)
-            config = speech.RecognitionConfig(
-                language_code='en-US',
-                sample_rate_hertz=16000,
-                enable_automatic_punctuation=True
-            )
-
-            response = client.recognize(config=config, audio=audio)
-            transcripts = [result.alternatives[0].transcript for result in response.results]
-            return jsonify({"transcripts": transcripts})
+            # Try to parse the JSON to see if it's correctly formatted
+            credentials_dict = json.loads(json_credentials.replace('\\n', '\n'))
+            return f"Credentials are set correctly: {credentials_dict['project_id']}"
         except Exception as e:
-            return jsonify({"error": str(e)}), 500
-
-    return render_template('index.html')
+            return f"Error parsing credentials: {str(e)}"
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)
