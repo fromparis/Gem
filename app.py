@@ -7,6 +7,14 @@ from io import BytesIO
 
 app = Flask(__name__)
 
+# Parse the JSON key from the environment variable
+key_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON')
+credentials_dict = json.loads(key_path.replace('\\n', '\n'))
+credentials = service_account.Credentials.from_service_account_info(credentials_dict)
+
+# Use the credentials to create a client
+client = speech.SpeechClient(credentials=credentials)
+
 @app.route('/', methods=['GET', 'POST'])
 def home():
     if request.method == 'POST':
