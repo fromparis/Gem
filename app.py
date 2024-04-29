@@ -1,20 +1,20 @@
 import os
-import json
-from flask import Flask, request, render_template, jsonify
+from flask import Flask, request, jsonify, render_template
+import subprocess
+from io import BytesIO
 from google.cloud import speech
 from google.oauth2 import service_account
-import moviepy.editor as mp
-from io import BytesIO
+import json
 
 app = Flask(__name__)
 
-# Load credentials from the file path where Render mounts Secret Files
+# Load credentials
 key_path = '/etc/secrets/google-credentials.json'
 with open(key_path) as key_file:
     credentials_dict = json.load(key_file)
 credentials = service_account.Credentials.from_service_account_info(credentials_dict)
 
-# Use the credentials to create a client
+# Speech client
 client = speech.SpeechClient(credentials=credentials)
 
 @app.route('/', methods=['GET', 'POST'])
@@ -27,31 +27,38 @@ def home():
             return jsonify({"error": "No file selected"}), 400
 
         try:
-            if file.filename.endswith('.mp4'):
-                video = mp.VideoFileClip(file)
-                audio = video.audio
-                audio_buffer = BytesIO()
-                # Ensure the output is in PCM format suitable for LINEAR16 encoding
-                audio.write_audiofile(audio_buffer, codec='pcm_s16le', nbytes=2, fps=16000)
-                audio_buffer.seek(0)
-                audio_content = audio_buffer.getvalue()
-            else:
-                # Assuming uploaded audio files are already in PCM format
-                audio_content = file.read()
+            # Save the file temporarily
+            filepath = os.path.join('/tmp', file.filename)
+            file.save(filepath)
 
+            # Convert the audio to LINEAR16 using ffmpeg
+            output_path = os.path.join('/tmp', 'output.wav')
+            command = ['ffmpeg', '-i', filepath, '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', output_path]
+            subprocess.run(command, check=True)
+
+            # Read the converted audio
+            with open(output_path, 'rb') as audio_file:
+                audio_content = audio_file.read()
+
+            # Configure the recognition request
             audio = speech.RecognitionAudio(content=audio_content)
             config = speech.RecognitionConfig(
-                encoding='LINEAR16',  # Ensure this matches the format of the audio_content
+                encoding='LINEAR16',
                 language_code='en-US',
                 sample_rate_hertz=16000,
                 enable_automatic_punctuation=True
             )
 
+            # Recognize the speech
             response = client.recognize(config=config, audio=audio)
             transcripts = [result.alternatives[0].transcript for result in response.results]
             return jsonify({"transcripts": transcripts})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+        finally:
+            # Clean up temporary files
+            os.remove(filepath)
+            os.remove(output_path)
 
     return render_template('index.html')
 
