@@ -43,13 +43,12 @@ def home():
                 audio_content = audio_file.read()
 
             # Configure the recognition request with language auto-detection
-            audio = speech.RecognitionAudio(content=audio_content)
-            config = speech.RecognitionConfig(
-                encoding='LINEAR16',
-                sample_rate_hertz=16000,
-                enable_automatic_punctuation=True,
-                alternative_language_codes=['en-US','zh-CN', 'fr-FR', 'es-ES', 'de-DE']
-            )
+        config = speech.RecognitionConfig(
+            encoding='LINEAR16',
+            sample_rate_hertz=16000,
+            language_code=selected_language,  # Use the language selected by the user
+            enable_automatic_punctuation=True
+        )
 
             # Recognize the speech
             response = client.recognize(config=config, audio=audio)
