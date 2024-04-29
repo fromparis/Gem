@@ -1,3 +1,4 @@
 Flask
 moviepy
 google-cloud-speech
+gunicorn
