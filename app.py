@@ -20,11 +20,13 @@ client = speech.SpeechClient(credentials=credentials)
 @app.route('/', methods=['GET', 'POST'])
 def home():
     if request.method == 'POST':
-        if 'file' not in request.files:
-            return jsonify({"error": "No file provided"}), 400
         file = request.files['file']
-        if file.filename == '':
+        selected_language = request.form.get('language')
+
+        if not file or file.filename == '':
             return jsonify({"error": "No file selected"}), 400
+        if not selected_language:
+            return jsonify({"error": "No language selected"}), 400
 
         try:
             # Save the file temporarily
