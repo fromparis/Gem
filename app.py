@@ -1,7 +1,6 @@
 import os
 from flask import Flask, request, jsonify, render_template
 import subprocess
-from io import BytesIO
 from google.cloud import speech
 from google.oauth2 import service_account
 import json
@@ -42,15 +41,16 @@ def home():
             with open(output_path, 'rb') as audio_file:
                 audio_content = audio_file.read()
 
-            # Configure the recognition request with language auto-detection
-        config = speech.RecognitionConfig(
-            encoding='LINEAR16',
-            sample_rate_hertz=16000,
-            language_code=selected_language,  # Use the language selected by the user
-            enable_automatic_punctuation=True
-        )
+            # Configure the recognition request with the selected language
+            config = speech.RecognitionConfig(
+                encoding='LINEAR16',
+                sample_rate_hertz=16000,
+                language_code=selected_language,  # Use the language selected by the user
+                enable_automatic_punctuation=True
+            )
 
             # Recognize the speech
+            audio = speech.RecognitionAudio(content=audio_content)
             response = client.recognize(config=config, audio=audio)
             transcripts = [result.alternatives[0].transcript for result in response.results]
             return jsonify({"transcripts": transcripts})
@@ -58,8 +58,10 @@ def home():
             return jsonify({"error": str(e)}), 500
         finally:
             # Clean up temporary files
-            os.remove(filepath)
-            os.remove(output_path)
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            if os.path.exists(output_path):
+                os.remove(output_path)
 
     return render_template('index.html')
 
