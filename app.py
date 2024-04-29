@@ -46,13 +46,28 @@ def home():
                 encoding='LINEAR16',
                 sample_rate_hertz=16000,
                 language_code=selected_language,  # Use the language selected by the user
-                enable_automatic_punctuation=True
+                enable_automatic_punctuation=True,
+                enable_word_time_offsets=True  # Enable word-level time offsets
             )
 
             # Recognize the speech
             audio = speech.RecognitionAudio(content=audio_content)
             response = client.recognize(config=config, audio=audio)
-            transcripts = [result.alternatives[0].transcript for result in response.results]
+            transcripts = []
+            for result in response.results:
+                for alternative in result.alternatives:
+                    words_info = [{
+                        'word': word_info.word,
+                        'start_time': word_info.start_time.total_seconds(),  # Convert to seconds
+                        'end_time': word_info.end_time.total_seconds()        # Convert to seconds
+                    } for word_info in alternative.words]
+
+                    transcripts.append({
+                        "transcript": alternative.transcript,
+                        "confidence": alternative.confidence,
+                        "words": words_info
+                    })
+
             return jsonify({"transcripts": transcripts})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
@@ -67,3 +82,4 @@ def home():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
