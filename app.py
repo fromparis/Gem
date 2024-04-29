@@ -1,20 +1,30 @@
-from flask import Flask, request, jsonify
 import os
-import whisper
+import platform
 
-app = Flask(__name__)
-model = whisper.load_model("base")  # Load the Whisper model
+import pkg_resources
+from setuptools import find_packages, setup
 
-@app.route('/transcribe', methods=['POST'])
-def transcribe_audio():
-    if 'audio' not in request.files:
-        return "No audio file provided", 400
-
-    audio_file = request.files['audio']
-    audio_file.save("temp_audio.webm")  # Save the uploaded file locally
-
-    result = model.transcribe("temp_audio.webm")  # Transcribe the audio
-    return jsonify(result)
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))  # Default to 5000 if PORT not set
+setup(
+    name="whisperx",
+    py_modules=["whisperx"],
+    version="3.1.1",
+    description="Time-Accurate Automatic Speech Recognition using Whisper.",
+    readme="README.md",
+    python_requires=">=3.8",
+    author="Max Bain",
+    url="https://github.com/m-bain/whisperx",
+    license="MIT",
+    packages=find_packages(exclude=["tests*"]),
+    install_requires=[
+        str(r)
+        for r in pkg_resources.parse_requirements(
+            open(os.path.join(os.path.dirname(__file__), "requirements.txt"))
+        )
+    ]
+    + [f"pyannote.audio==3.1.1"],
+    entry_points={
+        "console_scripts": ["whisperx=whisperx.transcribe:cli"],
+    },
+    include_package_data=True,
+    extras_require={"dev": ["pytest"]},
+)
