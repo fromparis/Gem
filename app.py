@@ -1,6 +1,8 @@
 from flask import Flask, request, render_template, jsonify
 from google.cloud import speech
 import moviepy.editor as mp
+from google.oauth2 import service_account
+import json
 from io import BytesIO
 
 app = Flask(__name__)
