@@ -1,35 +1,34 @@
-from flask import Flask, request, jsonify
-import os
 from google.cloud import speech
+from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe_video():
-    video_file = request.files['video']
-    client = speech.SpeechClient()
+    if 'video' not in request.files:
+        return "No file uploaded.", 400
 
+    video_file = request.files['video']
     audio_content = video_file.read()
+
+    client = speech.SpeechClient()
     audio = speech.RecognitionAudio(content=audio_content)
     config = speech.RecognitionConfig(
         enable_word_time_offsets=True,
         language_code="en-US",
         sample_rate_hertz=16000,
+        audio_channel_count=2,
+        enable_automatic_punctuation=True
     )
-    operation = client.long_running_recognize(config=config, audio=audio)
-    response = operation.result(timeout=90)
 
+    response = client.recognize(config=config, audio=audio)
     results = []
+
     for result in response.results:
-        alternative = result.alternatives[0]
-        for word_info in alternative.words:
-            word = word_info.word
-            start_time = word_info.start_time.total_seconds()
-            end_time = word_info.end_time.total_seconds()
+        for alternative in result.alternatives:
             results.append({
-                "word": word,
-                "start_time": start_time,
-                "end_time": end_time,
+                "transcript": alternative.transcript,
+                "confidence": alternative.confidence
             })
 
     return jsonify(results)
