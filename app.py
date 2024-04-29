@@ -40,13 +40,13 @@ def home():
             with open(output_path, 'rb') as audio_file:
                 audio_content = audio_file.read()
 
-            # Configure the recognition request
+            # Configure the recognition request with language auto-detection
             audio = speech.RecognitionAudio(content=audio_content)
             config = speech.RecognitionConfig(
                 encoding='LINEAR16',
-                language_code='en-US',
                 sample_rate_hertz=16000,
-                enable_automatic_punctuation=True
+                enable_automatic_punctuation=True,
+                alternative_language_codes=['en-US','zh-CN', 'fr-FR', 'es-ES', 'de-DE']
             )
 
             # Recognize the speech
