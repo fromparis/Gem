@@ -1,6 +1,3 @@
 Flask
-Flask-WTF
-requests
 moviepy
-beautifulsoup4
-Pillow
+google-cloud-speech
