@@ -31,14 +31,17 @@ def home():
                 video = mp.VideoFileClip(file)
                 audio = video.audio
                 audio_buffer = BytesIO()
+                # Ensure the output is in PCM format suitable for LINEAR16 encoding
                 audio.write_audiofile(audio_buffer, codec='pcm_s16le', nbytes=2, fps=16000)
                 audio_buffer.seek(0)
                 audio_content = audio_buffer.getvalue()
             else:
+                # Assuming uploaded audio files are already in PCM format
                 audio_content = file.read()
 
             audio = speech.RecognitionAudio(content=audio_content)
             config = speech.RecognitionConfig(
+                encoding='LINEAR16',  # Ensure this matches the format of the audio_content
                 language_code='en-US',
                 sample_rate_hertz=16000,
                 enable_automatic_punctuation=True
