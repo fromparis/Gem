@@ -4,7 +4,6 @@ import subprocess
 from google.cloud import speech, storage
 from google.oauth2 import service_account
 import json
-import io
 
 app = Flask(__name__)
 
@@ -26,7 +25,7 @@ storage_client = storage.Client(credentials=credentials)
 bucket_name = 'your-bucket-name'
 
 # Directory to store uploaded chunks
-UPLOAD_FOLDER = '/tmp/uploads'
+UPLOAD_FOLDER = '/persistent/uploads'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
@@ -59,66 +58,4 @@ def process_file():
                     combined_file.write(chunk_file.read())
                 os.remove(chunk_filename)  # Clean up chunk file
 
-        # Convert the audio to LINEAR16 using ffmpeg
-        output_path = os.path.join('/tmp', 'output.wav')
-        command = ['ffmpeg', '-i', combined_file_path, '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', output_path]
-        subprocess.run(command, check=True)
-
-        # Upload the audio file to Google Cloud Storage
-        bucket = storage_client.get_bucket(bucket_name)
-        blob = bucket.blob(os.path.basename(output_path))
-        blob.upload_from_filename(output_path)
-
-        # Use LongRunningRecognize with the URI of the uploaded file
-        audio = speech.RecognitionAudio(uri=f'gs://{bucket_name}/{os.path.basename(output_path)}')
-        config = speech.RecognitionConfig(
-            encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-            sample_rate_hertz=16000,
-            language_code=selected_language,
-            enable_automatic_punctuation=True,
-            enable_word_time_offsets=include_timestamps  # Enable word-level time offsets if requested
-        )
-
-        operation = speech_client.long_running_recognize(config=config, audio=audio)
-        response = operation.result(timeout=600)
-
-        transcripts = []
-        for result in response.results:
-            for alternative in result.alternatives:
-                if include_timestamps:
-                    words_info = [{
-                        'word': word_info.word,
-                        'start_time': word_info.start_time.total_seconds(),
-                        'end_time': word_info.end_time.total_seconds()
-                    } for word_info in alternative.words]
-                    transcript_text = alternative.transcript
-                    for word in words_info:
-                        transcript_text += f"\n{word['word']} ({word['start_time']} - {word['end_time']})"
-                else:
-                    transcript_text = alternative.transcript
-
-                transcripts.append(transcript_text)
-
-        # Write transcripts to a text file
-        text_file_path = os.path.join('/tmp', 'transcription.txt')
-        with open(text_file_path, 'w') as text_file:
-            text_file.write("\n\n".join(transcripts))
-
-        return send_file(text_file_path, as_attachment=True, download_name='transcription.txt')
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-    finally:
-        # Clean up temporary files
-        if os.path.exists(combined_file_path):
-            os.remove(combined_file_path)
-        if os.path.exists(output_path):
-            os.remove(output_path)
-
-@app.route('/', methods=['GET'])
-def home():
-    return render_template('index.html')
-
-if __name__ == '__main__':
-    app.run(debug=True)
+ 
