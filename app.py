@@ -34,11 +34,11 @@ def upload_file():
 
     try:
         # Appelle l'API d'OpenAI pour transcrire l'audio
-        with open(file_path, 'rb') as audio_file:
-            response = openai.Audio.transcribe(
-                model="whisper-1",
-                file=audio_file
-            )
+        audio_file = open(file_path, "rb")
+        response = openai.Audio.transcriptions.create(
+            model="whisper-1",
+            file=audio_file
+        )
         return jsonify(response)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
