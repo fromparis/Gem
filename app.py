@@ -1,26 +1,44 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import openai
 import os
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-# Configure ton API Key OpenAI à partir des variables d'environnement
+# Configure l'API Key OpenAI en utilisant les secrets
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
-@app.route('/transcribe', methods=['POST'])
-def transcribe():
-    audio_url = request.json.get('audio_url')
-    
-    # Vérifie que l'URL audio est fournie
-    if not audio_url:
-        return jsonify({"error": "audio_url is required"}), 400
+# Répertoire de téléchargement
+UPLOAD_FOLDER = 'uploads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    filename = secure_filename(file.filename)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(file_path)
 
     try:
         # Appelle l'API d'OpenAI pour transcrire l'audio
-        response = openai.Audio.transcribe(
-            model="whisper-1",
-            file_url=audio_url
-        )
+        with open(file_path, 'rb') as audio_file:
+            response = openai.Audio.transcribe(
+                model="whisper-1",
+                file=audio_file
+            )
         return jsonify(response)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
