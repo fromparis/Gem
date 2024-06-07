@@ -8,8 +8,8 @@ app = Flask(__name__)
 # Increase the maximum request payload size
 app.config['MAX_CONTENT_LENGTH'] = 25 * 1024 * 1024  # 25 MB
 
-# Set your OpenAI API key
-openai.api_key = 'openai-api-key'
+# Retrieve the OpenAI API key from the environment
+openai.api_key = os.getenv('OPENAI_API_KEY')
 
 # Directory to store uploaded chunks
 UPLOAD_FOLDER = '/tmp/uploads'
@@ -51,4 +51,37 @@ def process_file():
                 model="whisper-1",
                 file=audio_file,
                 response_format="verbose_json",
-                timestamp_granularities=["word"] if include_timestamps
+                timestamp_granularities=["word"] if include_timestamps else []
+            )
+
+        # Extract transcript text and timestamps
+        transcripts = []
+        if include_timestamps:
+            for segment in response['segments']:
+                for word_info in segment['words']:
+                    transcript_text = f"{word_info['word']} ({word_info['start']} - {word_info['end']})"
+                    transcripts.append(transcript_text)
+        else:
+            transcripts.append(response['text'])
+
+        # Write transcripts to a text file
+        text_file_path = os.path.join(UPLOAD_FOLDER, 'transcription.txt')
+        with open(text_file_path, 'w') as text_file:
+            text_file.write("\n\n".join(transcripts))
+
+        return send_file(text_file_path, as_attachment=True, download_name='transcription.txt')
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        # Clean up temporary files
+        if os.path.exists(combined_file_path):
+            os.remove(combined_file_path)
+
+@app.route('/', methods=['GET'])
+def home():
+    return render_template('index.html')
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0')
