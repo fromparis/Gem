@@ -1,9 +1,10 @@
 import os
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, send_file
 import subprocess
 from google.cloud import speech
 from google.oauth2 import service_account
 import json
+import io
 
 app = Flask(__name__)
 
@@ -21,6 +22,7 @@ def home():
     if request.method == 'POST':
         file = request.files['file']
         selected_language = request.form.get('language')
+        include_timestamps = request.form.get('timestamps') == 'true'
 
         if not file or file.filename == '':
             return jsonify({"error": "No file selected"}), 400
@@ -45,9 +47,9 @@ def home():
             config = speech.RecognitionConfig(
                 encoding='LINEAR16',
                 sample_rate_hertz=16000,
-                language_code=selected_language,  # Use the language selected by the user
+                language_code=selected_language,
                 enable_automatic_punctuation=True,
-                enable_word_time_offsets=True  # Enable word-level time offsets
+                enable_word_time_offsets=include_timestamps  # Enable word-level time offsets if requested
             )
 
             # Recognize the speech
@@ -56,19 +58,27 @@ def home():
             transcripts = []
             for result in response.results:
                 for alternative in result.alternatives:
-                    words_info = [{
-                        'word': word_info.word,
-                        'start_time': word_info.start_time.total_seconds(),  # Convert to seconds
-                        'end_time': word_info.end_time.total_seconds()        # Convert to seconds
-                    } for word_info in alternative.words]
+                    if include_timestamps:
+                        words_info = [{
+                            'word': word_info.word,
+                            'start_time': word_info.start_time.total_seconds(),
+                            'end_time': word_info.end_time.total_seconds()
+                        } for word_info in alternative.words]
+                        transcript_text = alternative.transcript
+                        for word in words_info:
+                            transcript_text += f"\n{word['word']} ({word['start_time']} - {word['end_time']})"
+                    else:
+                        transcript_text = alternative.transcript
 
-                    transcripts.append({
-                        "transcript": alternative.transcript,
-                        "confidence": alternative.confidence,
-                        "words": words_info
-                    })
+                    transcripts.append(transcript_text)
 
-            return jsonify({"transcripts": transcripts})
+            # Write transcripts to a text file
+            text_file_path = os.path.join('/tmp', 'transcription.txt')
+            with open(text_file_path, 'w') as text_file:
+                text_file.write("\n\n".join(transcripts))
+
+            return send_file(text_file_path, as_attachment=True, download_name='transcription.txt')
+
         except Exception as e:
             return jsonify({"error": str(e)}), 500
         finally:
@@ -82,4 +92,3 @@ def home():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
