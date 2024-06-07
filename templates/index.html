@@ -2,52 +2,33 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Upload Audio/Video for Transcription</title>
-    <style>
-        .spinner {
-            display: none;
-            width: 50px;
-            height: 50px;
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #3498db;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
-    <script>
-        function showSpinner() {
-            document.getElementById('spinner').style.display = 'block';
-        }
-    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transcription App</title>
 </head>
 <body>
-    <h1>Upload your file</h1>
-    <form action="/process_file" method="post" enctype="multipart/form-data" onsubmit="showSpinner()">
-        <input type="file" name="file" required>
-
-        <!-- Dropdown for language selection -->
-        <select name="language" required>
-            <option value="">Select Language</option>
-            <option value="en-US">English (US)</option>
-            <option value="zh-CN">Chinese (Mandarin)</option>
-            <option value="fr-FR">French</option>
-            <option value="es-ES">Spanish</option>
-            <option value="de-DE">German</option>
-        </select>
-
-        <!-- Checkbox for timestamps -->
-        <label>
-            <input type="checkbox" name="timestamps" value="true">
-            Include Timestamps
-        </label>
-
-        <input type="submit" value="Transcribe">
+    <h1>Upload an Audio File for Transcription</h1>
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" id="audioFile" accept="audio/*" required>
+        <button type="submit">Upload</button>
     </form>
-    <div id="spinner" class="spinner"></div>
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            
+            const fileInput = document.getElementById('audioFile');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            const response = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+            document.getElementById('result').innerText = JSON.stringify(result, null, 2);
+        });
+    </script>
 </body>
 </html>
