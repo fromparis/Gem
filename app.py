@@ -8,6 +8,9 @@ import io
 
 app = Flask(__name__)
 
+# Increase the maximum request payload size
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100 MB
+
 # Load credentials
 key_path = '/etc/secrets/google-credentials.json'
 with open(key_path) as key_file:
